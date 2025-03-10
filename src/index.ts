@@ -13,6 +13,11 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // OpenAI configuration
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
@@ -35,6 +40,8 @@ app.post('/transcribe', async (req, res) => {
       return res.status(400).json({ message: 'Video URL is required' });
     }
 
+    console.log('Processing video:', videoUrl);
+
     // Download and convert video to audio
     await new Promise((resolve, reject) => {
       ytdl(videoUrl, { filter: 'audioonly' })
@@ -47,14 +54,20 @@ app.post('/transcribe', async (req, res) => {
         );
     });
 
+    console.log('Audio extracted successfully');
+
     // Read the audio file
     const audioFile = await fs.readFile(tempFilePath);
+
+    console.log('Starting transcription');
 
     // Transcribe with Whisper
     const response = await openai.createTranscription(
       audioFile as any,
       'whisper-1'
     );
+
+    console.log('Transcription completed');
 
     // Clean up temp file
     await fs.unlink(tempFilePath).catch(console.error);
